@@ -1,5 +1,4 @@
 # Provisiona tudo no Kubernetes local (Docker Desktop): build da imagem + apply dos manifests.
-$ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
 if (-not (Test-Path .env)) { Copy-Item .env.example .env; Write-Host 'Criado .env a partir do .env.example' }
