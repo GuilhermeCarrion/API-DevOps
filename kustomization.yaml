@@ -1,0 +1,24 @@
+# Aplica tudo no cluster: kubectl apply -k .
+# Fica na raiz para reaproveitar as mesmas configs do Prometheus/Grafana usadas no docker-compose.
+namespace: tarefas
+resources:
+  - k8s/namespace.yaml
+  - k8s/redis.yaml
+  - k8s/postgres.yaml
+  - k8s/app.yaml
+  - k8s/prometheus.yaml
+  - k8s/grafana.yaml
+configMapGenerator:
+  - name: prometheus-config
+    files: [prometheus.yml=monitoring/prometheus/prometheus-k8s.yml]
+  - name: grafana-datasources
+    files: [monitoring/grafana/provisioning/datasources/datasource.yml]
+  - name: grafana-dashboard-providers
+    files: [monitoring/grafana/provisioning/dashboards/dashboards.yml]
+  - name: grafana-alerting
+    files: [monitoring/grafana/provisioning/alerting/alerts.yml]
+  - name: grafana-dashboards
+    files: [monitoring/grafana/dashboards/tarefas-api.json]
+secretGenerator:
+  - name: tarefas-secrets
+    envs: [.env]

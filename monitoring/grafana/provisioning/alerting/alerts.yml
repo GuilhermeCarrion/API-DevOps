@@ -1,0 +1,93 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: discord
+    receivers:
+      - uid: discord
+        type: discord
+        settings:
+          url: $DISCORD_WEBHOOK_URL
+
+policies:
+  - orgId: 1
+    receiver: discord
+    group_by: [alertname]
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 1h
+
+groups:
+  - orgId: 1
+    name: tarefas-api
+    folder: Alertas
+    interval: 30s
+    rules:
+      - uid: app-down
+        title: App fora do ar
+        condition: C
+        for: 1m
+        noDataState: Alerting # sem alvo no Prometheus também é "fora do ar"
+        execErrState: Error
+        labels: { severity: critical }
+        annotations:
+          summary: Nenhuma instância da tarefas-api está respondendo ao Prometheus.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: 'sum(up{job="app"})' }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions: [{ evaluator: { type: lt, params: [1] } }]
+
+      - uid: high-error-rate
+        title: Taxa de erro alta
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations:
+          summary: 'Mais de 10% das requisições estão retornando erro 5xx.'
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: 'sum(rate(http_requests_total{status=~"5.."}[1m])) / sum(rate(http_requests_total[1m]))'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions: [{ evaluator: { type: gt, params: [0.1] } }]
+
+      - uid: high-memory
+        title: Memória alta na API
+        condition: C
+        for: 2m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations:
+          summary: 'Uma instância da API está usando mais de 200 MB de memória.'
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, instant: true, expr: 'max(process_resident_memory_bytes{job="app"})' }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions: [{ evaluator: { type: gt, params: [200000000] } }]
